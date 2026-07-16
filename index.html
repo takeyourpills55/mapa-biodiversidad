@@ -128,7 +128,7 @@
     <script>
         // --- SISTEMA BÁSICO DE CONTRASEÑA ---
         const CLAVE_SECRETA = "BioMap2026"; // Cambia esta contraseña por la que desees
-        const userPass = prompt("🔒 Ingrese la contraseña para acceder al Mapa de Biodiversidad:");
+        const userPass = prompt("Ingrese la contraseña para acceder al Mapa de Biodiversidad:");
         
         if (userPass !== CLAVE_SECRETA) {
             document.body.innerHTML = "<h2 style='text-align:center; margin-top:20vh; color:#d32f2f; font-family:sans-serif;'>❌ Acceso denegado. Contraseña incorrecta.</h2>";
@@ -228,7 +228,7 @@
                 if (lon && lon < -100) lon = lon / Math.pow(10, lonStr.replace(/[^0-9]/g, '').length - 2);
 
                 if (!isNaN(lat) && !isNaN(lon)) {
-                    const color = getStatusColor(row['Estado de conservacion']);
+                    const color = getStatusColor(row['Estado de Conservacion']);
                     const shapeClass = row['Tipo'] === 'Flora' ? 'marker-flora' : 'marker-fauna';
                     
                     const customIcon = L.divIcon({
@@ -240,7 +240,7 @@
 
                     const origen = row['Origen'] || 'No especificado';
                     const origenColor = getOrigenColor(origen);
-                    const estado = row['Estado de conservacion'] || 'No Evaluado (NE)';
+                    const estado = row['Estado de Conservacion'] || 'No Evaluado (NE)';
 
                     const popupContent = `
                         <div class="popup-content">

@@ -103,9 +103,38 @@
         .custom-div-icon { background: transparent; border: none; }
         .marker-flora { width: 12px; height: 12px; border-radius: 50%; border: 1px solid #000; box-shadow: 0 0 3px rgba(0,0,0,0.5); }
         .marker-fauna { width: 12px; height: 12px; transform: rotate(45deg); border: 1px solid #000; box-shadow: 0 0 3px rgba(0,0,0,0.5); }
+        
+        /* ESTILOS DE LA ETIQUETA DE AUTORÍA */
+        .authorship-tag {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            z-index: 2000;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 12px 18px;
+            border-left: 5px solid #007bff;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            font-size: 13px;
+            color: #2c3e50;
+            line-height: 1.5;
+            pointer-events: none; /* Permite interactuar con el mapa por debajo si fuera necesario */
+        }
+        .authorship-tag strong {
+            display: block;
+            font-size: 15px;
+            color: #007bff;
+            margin-bottom: 2px;
+        }
     </style>
 </head>
 <body>
+
+    <!-- ETIQUETA DE AUTORÍA -->
+    <div class="authorship-tag">
+        <strong>Curso Biología de la Conservación</strong>
+        EP Genética y Biotecnología | 2026-I
+    </div>
 
     <button id="reopenControlsBtn" onclick="toggleControls(true)">Cambiar Datos</button>
 
@@ -225,7 +254,6 @@ function drawMarkersOnMap(floraData, faunaData) {
     
     let count = 0;
 
-    // Función auxiliar para buscar columnas ignorando espacios en blanco o mayúsculas
     const getCol = (row, colName) => {
         const target = colName.trim().toLowerCase();
         const key = Object.keys(row).find(k => k.trim().toLowerCase() === target);
@@ -243,7 +271,6 @@ function drawMarkersOnMap(floraData, faunaData) {
 
         if (!isNaN(lat) && !isNaN(lon)) {
             
-            // Usamos la función auxiliar para garantizar que se lea la información aunque haya espacios ocultos
             let especie = getCol(row, 'Especie') || 'No especificada';
             let estado  = getCol(row, 'Estado') || 'No Evaluado (NE)';
             let origen  = getCol(row, 'Origen') || 'No especificado';
@@ -267,11 +294,9 @@ function drawMarkersOnMap(floraData, faunaData) {
             let especieLimpia = especie !== 'No especificada' ? especie.toString().trim() : '';
             
             if (especieLimpia) {
-                // Codificamos el texto para que los espacios sean seguros en la URL (ej. "Acalypha%20godseffiana")
                 let encodedEspecie = encodeURIComponent(especieLimpia).replace(/'/g, "%27");
                 
                 for(let i = 1; i <= 6; i++) {
-                    // Se utiliza data-step para hacer una transición a prueba de fallos entre formatos
                     imgsHTML += `<img src="imagenes/${encodedEspecie}-${i}.jpeg" 
                                  class="gallery-img" 
                                  data-step="1"

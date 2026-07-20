@@ -236,27 +236,14 @@
 
                 if (!isNaN(lat) && !isNaN(lon)) {
                     
-                    let especie = 'No especificada';
-                    let estado = 'No Evaluado (NE)';
-                    let origen = 'No especificado';
-                    let phylum = '-';
-                    let clase = '-';
-                    let orden = '-';
-                    let familia = '-';
-                    
-                    // Busqueda inteligente para evitar fallos por espacios o mayusculas en Excel
-                    for (let key in row) {
-                        if(row[key] === undefined || row[key] === null) continue;
-                        let cleanKey = key.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-                        
-                        if (cleanKey === 'especie' || cleanKey === 'especies' || cleanKey === 'nombre cientifico') especie = row[key];
-                        if (cleanKey === 'estado de conservacion' || cleanKey === 'estado') estado = row[key];
-                        if (cleanKey === 'origen') origen = row[key];
-                        if (cleanKey === 'phylum' || cleanKey === 'filo') phylum = row[key];
-                        if (cleanKey === 'clase') clase = row[key];
-                        if (cleanKey === 'orden') orden = row[key];
-                        if (cleanKey === 'familia') familia = row[key];
-                    }
+                    // Búsqueda convencional directa basada en las cabeceras exactas del Excel
+                    let especie = row['Especie'] || 'No especificada';
+                    let estado  = row['Estado de Conservacion'] || 'No Evaluado (NE)';
+                    let origen  = row['Origen'] || 'No especificado';
+                    let phylum  = row['Phylum'] || '-';
+                    let clase   = row['Clase'] || '-';
+                    let orden   = row['Orden'] || '-';
+                    let familia = row['Familia'] || '-';
 
                     const color = getStatusColor(estado);
                     const origenColor = getOrigenColor(origen);

@@ -238,7 +238,7 @@
                     
                     // Búsqueda convencional directa basada en las cabeceras exactas del Excel
                     let especie = row['Especie'] || 'No especificada';
-                    let estado  = row['Estado de Conservacion'] || 'No Evaluado (NE)';
+                    let estado  = row['Estado'] || 'No Evaluado (NE)';
                     let origen  = row['Origen'] || 'No especificado';
                     let phylum  = row['Phylum'] || '-';
                     let clase   = row['Clase'] || '-';
@@ -258,12 +258,28 @@
 
                     // Logica de Galeria de Imagenes
                     let imgsHTML = '';
+                    
+                    // CORRECCIÓN 1: Mantenemos el nombre EXACTO sin alterar espacios
                     let especieLimpia = especie !== 'No especificada' ? especie.toString().trim() : '';
                     
                     if (especieLimpia) {
                         for(let i = 1; i <= 6; i++) {
-                            // Si la imagen no existe, se borra a si misma llamando a checkEmptyGallery
-                            imgsHTML += `<img src="imagenes/${especieLimpia}_${i}.jpg" class="gallery-img" onerror="this.remove(); checkEmptyGallery(${count});">`;
+                            // CORRECCIÓN 2 y 3: Usamos la carpeta exacta "Imagenes_Extraidas" y el guion "-"
+                            // CORRECCIÓN 4: He configurado un pequeño truco ("fallback"). 
+                            // Primero intentará cargar .jpeg (que es lo más común de PyMuPDF). 
+                            // Si falla, intentará .png, y si falla intentará .jpg antes de eliminar la imagen.
+                            imgsHTML += `<img src="imagenes/${especieLimpia}-${i}.jpeg" 
+                                         class="gallery-img" 
+                                         onerror="
+                                            if (this.src.endsWith('.jpeg')) {
+                                                this.src = 'imagenes/${especieLimpia}-${i}.png';
+                                            } else if (this.src.endsWith('.png')) {
+                                                this.src = 'imagenes/${especieLimpia}-${i}.jpg';
+                                            } else {
+                                                this.remove(); 
+                                                checkEmptyGallery(${count});
+                                            }
+                                         ">`;
                         }
                     }
 

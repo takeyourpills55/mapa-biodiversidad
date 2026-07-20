@@ -216,98 +216,106 @@
             return '#9e9e9e';
         }
 
-        function drawMarkersOnMap(floraData, faunaData) {
-            markersLayer.clearLayers();
+function drawMarkersOnMap(floraData, faunaData) {
+    markersLayer.clearLayers();
+    
+    const floraWithTags = floraData.map(item => ({...item, Tipo: 'Flora'}));
+    const faunaWithTags = faunaData.map(item => ({...item, Tipo: 'Fauna'}));
+    const allData = [...floraWithTags, ...faunaWithTags];
+    
+    let count = 0;
+
+    // Función auxiliar para buscar columnas ignorando espacios en blanco o mayúsculas
+    const getCol = (row, colName) => {
+        const target = colName.trim().toLowerCase();
+        const key = Object.keys(row).find(k => k.trim().toLowerCase() === target);
+        return key ? row[key] : undefined;
+    };
+
+    allData.forEach(row => {
+        let latStr = String(getCol(row, 'Latitud') || '').replace(',', '.').trim();
+        let lonStr = String(getCol(row, 'Longitud') || '').replace(',', '.').trim();
+        let lat = parseFloat(latStr);
+        let lon = parseFloat(lonStr);
+
+        if (lat && lat < -100) lat = lat / Math.pow(10, latStr.replace(/[^0-9]/g, '').length - 2);
+        if (lon && lon < -100) lon = lon / Math.pow(10, lonStr.replace(/[^0-9]/g, '').length - 2);
+
+        if (!isNaN(lat) && !isNaN(lon)) {
             
-            const floraWithTags = floraData.map(item => ({...item, Tipo: 'Flora'}));
-            const faunaWithTags = faunaData.map(item => ({...item, Tipo: 'Fauna'}));
-            const allData = [...floraWithTags, ...faunaWithTags];
+            // Usamos la función auxiliar para garantizar que se lea la información aunque haya espacios ocultos
+            let especie = getCol(row, 'Especie') || 'No especificada';
+            let estado  = getCol(row, 'Estado') || 'No Evaluado (NE)';
+            let origen  = getCol(row, 'Origen') || 'No especificado';
+            let phylum  = getCol(row, 'Phylum') || '-';
+            let clase   = getCol(row, 'Clase') || '-';
+            let orden   = getCol(row, 'Orden') || '-';
+            let familia = getCol(row, 'Familia') || '-';
+
+            const color = getStatusColor(estado);
+            const origenColor = getOrigenColor(origen);
+            const shapeClass = row['Tipo'] === 'Flora' ? 'marker-flora' : 'marker-fauna';
             
-            let count = 0;
-
-            allData.forEach(row => {
-                let latStr = String(row['Latitud'] || '').replace(',', '.').trim();
-                let lonStr = String(row['Longitud'] || '').replace(',', '.').trim();
-                let lat = parseFloat(latStr);
-                let lon = parseFloat(lonStr);
-
-                if (lat && lat < -100) lat = lat / Math.pow(10, latStr.replace(/[^0-9]/g, '').length - 2);
-                if (lon && lon < -100) lon = lon / Math.pow(10, lonStr.replace(/[^0-9]/g, '').length - 2);
-
-                if (!isNaN(lat) && !isNaN(lon)) {
-                    
-                    // Búsqueda convencional directa basada en las cabeceras exactas del Excel
-                    let especie = row['Especie'] || 'No especificada';
-                    let estado  = row['Estado'] || 'No Evaluado (NE)';
-                    let origen  = row['Origen'] || 'No especificado';
-                    let phylum  = row['Phylum'] || '-';
-                    let clase   = row['Clase'] || '-';
-                    let orden   = row['Orden'] || '-';
-                    let familia = row['Familia'] || '-';
-
-                    const color = getStatusColor(estado);
-                    const origenColor = getOrigenColor(origen);
-                    const shapeClass = row['Tipo'] === 'Flora' ? 'marker-flora' : 'marker-fauna';
-                    
-                    const customIcon = L.divIcon({
-                        className: 'custom-div-icon',
-                        html: `<div class="${shapeClass}" style="background-color: ${color};"></div>`,
-                        iconSize: [14, 14],
-                        iconAnchor: [7, 7]
-                    });
-
-                    // Logica de Galeria de Imagenes
-                    let imgsHTML = '';
-                    
-                    // CORRECCIÓN 1: Mantenemos el nombre EXACTO sin alterar espacios
-                    let especieLimpia = especie !== 'No especificada' ? especie.toString().trim() : '';
-                    
-                    if (especieLimpia) {
-                        for(let i = 1; i <= 6; i++) {
-                            // CORRECCIÓN 2 y 3: Usamos la carpeta exacta "Imagenes_Extraidas" y el guion "-"
-                            // CORRECCIÓN 4: He configurado un pequeño truco ("fallback"). 
-                            // Primero intentará cargar .jpeg (que es lo más común de PyMuPDF). 
-                            // Si falla, intentará .png, y si falla intentará .jpg antes de eliminar la imagen.
-                            imgsHTML += `<img src="imagenes/${especieLimpia}-${i}.jpeg" 
-                                         class="gallery-img" 
-                                         onerror="
-                                            if (this.src.endsWith('.jpeg')) {
-                                                this.src = 'imagenes/${especieLimpia}-${i}.png';
-                                            } else if (this.src.endsWith('.png')) {
-                                                this.src = 'imagenes/${especieLimpia}-${i}.jpg';
-                                            } else {
-                                                this.remove(); 
-                                                checkEmptyGallery(${count});
-                                            }
-                                         ">`;
-                        }
-                    }
-
-                    const popupContent = `
-                        <div class="popup-content">
-                            <h4>${row['Tipo']}: <i>${especie}</i></h4>
-                            <hr>
-                            <p><b>Phylum:</b> ${phylum}<br>
-                               <b>Clase:</b> ${clase}<br>
-                               <b>Orden:</b> ${orden}<br>
-                               <b>Familia:</b> ${familia}<br>
-                               <b>Origen:</b> <span style="color: ${origenColor}; font-weight: bold;">${origen}</span><br>
-                               <b>Estado:</b> <span style="color: ${color}; font-weight: bold;">${estado}</span></p>
-                            
-                            <div id="gal-${count}" class="gallery-container">
-                                ${imgsHTML}
-                            </div>
-                            <div id="noimg-${count}" class="image-placeholder" style="display:none;"><p style="margin:0;">(Imagenes no disponibles)</p></div>
-                        </div>
-                    `;
-
-                    L.marker([lat, lon], { icon: customIcon }).bindPopup(popupContent).addTo(markersLayer);
-                    count++;
-                }
+            const customIcon = L.divIcon({
+                className: 'custom-div-icon',
+                html: `<div class="${shapeClass}" style="background-color: ${color};"></div>`,
+                iconSize: [14, 14],
+                iconAnchor: [7, 7]
             });
 
-            return count;
+            let imgsHTML = '';
+            let especieLimpia = especie !== 'No especificada' ? especie.toString().trim() : '';
+            
+            if (especieLimpia) {
+                // Codificamos el texto para que los espacios sean seguros en la URL (ej. "Acalypha%20godseffiana")
+                let encodedEspecie = encodeURIComponent(especieLimpia).replace(/'/g, "%27");
+                
+                for(let i = 1; i <= 6; i++) {
+                    // Se utiliza data-step para hacer una transición a prueba de fallos entre formatos
+                    imgsHTML += `<img src="imagenes/${encodedEspecie}-${i}.jpeg" 
+                                 class="gallery-img" 
+                                 data-step="1"
+                                 onerror="
+                                    let step = parseInt(this.getAttribute('data-step'));
+                                    if (step === 1) {
+                                        this.setAttribute('data-step', '2');
+                                        this.src = 'imagenes/${encodedEspecie}-${i}.png';
+                                    } else if (step === 2) {
+                                        this.setAttribute('data-step', '3');
+                                        this.src = 'imagenes/${encodedEspecie}-${i}.jpg';
+                                    } else {
+                                        this.remove(); 
+                                        checkEmptyGallery(${count});
+                                    }
+                                 ">`;
+                }
+            }
+
+            const popupContent = `
+                <div class="popup-content">
+                    <h4>${row['Tipo']}: <i>${especie}</i></h4>
+                    <hr>
+                    <p><b>Phylum:</b> ${phylum}<br>
+                       <b>Clase:</b> ${clase}<br>
+                       <b>Orden:</b> ${orden}<br>
+                       <b>Familia:</b> ${familia}<br>
+                       <b>Origen:</b> <span style="color: ${origenColor}; font-weight: bold;">${origen}</span><br>
+                       <b>Estado:</b> <span style="color: ${color}; font-weight: bold;">${estado}</span></p>
+                    
+                    <div id="gal-${count}" class="gallery-container">
+                        ${imgsHTML}
+                    </div>
+                    <div id="noimg-${count}" class="image-placeholder" style="display:none;"><p style="margin:0;">(Imágenes no disponibles)</p></div>
+                </div>
+            `;
+
+            L.marker([lat, lon], { icon: customIcon }).bindPopup(popupContent).addTo(markersLayer);
+            count++;
         }
+    });
+
+    return count;
+}
 
         async function fetchAndParseExcel(url) {
             const response = await fetch(url);

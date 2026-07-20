@@ -53,6 +53,7 @@
             border: 1px solid #dee2e6;
         }
         .file-input label { display: block; margin-bottom: 5px; font-weight: bold; color: #495057; }
+        
         .action-btn {
             padding: 10px 20px;
             background: #007bff;
@@ -84,17 +85,24 @@
             transition: all 0.3s ease;
         }
         #reopenControlsBtn:hover { background: #007bff; color: white; }
+        
         .popup-content { font-family: Arial, sans-serif; width: 260px; }
         .popup-content h4 { margin: 0 0 5px 0; color: #333; }
         .popup-content hr { margin: 8px 0; border: 0; border-top: 1px solid #ccc; }
         .popup-content p { font-size: 13px; margin: 4px 0; line-height: 1.4; }
+        
+        .gallery-container { display: flex; overflow-x: auto; gap: 5px; margin-top: 10px; padding-bottom: 5px; }
+        .gallery-container::-webkit-scrollbar { height: 6px; }
+        .gallery-container::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+        .gallery-img { height: 120px; border-radius: 4px; object-fit: cover; flex-shrink: 0; }
         .image-placeholder { margin-top: 10px; padding: 10px; background: #f1f1f1; text-align: center; border-radius: 4px; font-size: 12px; color: #666; font-style: italic; }
+        
         .legend { background: white; padding: 10px; border-radius: 5px; box-shadow: 0 1px 5px rgba(0,0,0,0.4); font-size: 14px; line-height: 1.5; }
         .legend-item { display: flex; align-items: center; margin-bottom: 5px; }
         .legend-color { width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; border: 1px solid #000; }
         .custom-div-icon { background: transparent; border: none; }
-        .marker-flora { width: 12px; height: 12px; border-radius: 50%; border: 1px solid #000; }
-        .marker-fauna { width: 12px; height: 12px; transform: rotate(45deg); border: 1px solid #000; }
+        .marker-flora { width: 12px; height: 12px; border-radius: 50%; border: 1px solid #000; box-shadow: 0 0 3px rgba(0,0,0,0.5); }
+        .marker-fauna { width: 12px; height: 12px; transform: rotate(45deg); border: 1px solid #000; box-shadow: 0 0 3px rgba(0,0,0,0.5); }
     </style>
 </head>
 <body>
@@ -176,10 +184,20 @@
             setTimeout(() => map.invalidateSize(), 100);
         }
 
+        function checkEmptyGallery(id) {
+            setTimeout(() => {
+                const gal = document.getElementById('gal-' + id);
+                const placeholder = document.getElementById('noimg-' + id);
+                if (gal && gal.querySelectorAll('img').length === 0) {
+                    gal.style.display = 'none';
+                    if (placeholder) placeholder.style.display = 'block';
+                }
+            }, 50);
+        }
+
         function getStatusColor(statusText) {
             if (!statusText) return '#9e9e9e';
             const s = statusText.toUpperCase().trim();
-            
             if (s === 'CR' || s.includes('(CR)') || s.includes('CRITICO') || s.includes('CRÍTICO')) return '#d32f2f';
             if (s === 'EN' || s.includes('(EN)') || s.includes('EN PELIGRO')) return '#f57c00';
             if (s === 'VU' || s.includes('(VU)') || s.includes('VULNERABLE')) return '#fbc02d';
@@ -187,7 +205,6 @@
             if (s === 'LC' || s.includes('(LC)') || s.includes('MENOR')) return '#388e3c';
             if (s === 'EW' || s.includes('(EW)') || s.includes('EXTINTA')) return '#7b1fa2';
             if (s === 'NE' || s.includes('(NE)')) return '#9e9e9e';
-            
             return '#9e9e9e';
         }
 
@@ -195,7 +212,7 @@
             if (!origenText) return '#9e9e9e';
             const o = origenText.toUpperCase().trim();
             if (o.includes('NATIVA')) return '#2e7d32';
-            if (o.includes('EXOTICA') || o.includes('EXÓTICA')) return '#1565c0';
+            if (o.includes('EXOTICA') || o.includes('EXÓTICA') || o.includes('INTRODUCIDA')) return '#1565c0';
             return '#9e9e9e';
         }
 
@@ -219,17 +236,26 @@
 
                 if (!isNaN(lat) && !isNaN(lon)) {
                     
+                    let especie = 'No especificada';
                     let estado = 'No Evaluado (NE)';
                     let origen = 'No especificado';
+                    let phylum = '-';
+                    let clase = '-';
+                    let orden = '-';
+                    let familia = '-';
                     
+                    // Busqueda inteligente para evitar fallos por espacios o mayusculas en Excel
                     for (let key in row) {
+                        if(row[key] === undefined || row[key] === null) continue;
                         let cleanKey = key.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-                        if (cleanKey === 'estado de conservacion' || cleanKey === 'estado') {
-                            estado = row[key];
-                        }
-                        if (cleanKey === 'origen') {
-                            origen = row[key];
-                        }
+                        
+                        if (cleanKey === 'especie' || cleanKey === 'especies' || cleanKey === 'nombre cientifico') especie = row[key];
+                        if (cleanKey === 'estado de conservacion' || cleanKey === 'estado') estado = row[key];
+                        if (cleanKey === 'origen') origen = row[key];
+                        if (cleanKey === 'phylum' || cleanKey === 'filo') phylum = row[key];
+                        if (cleanKey === 'clase') clase = row[key];
+                        if (cleanKey === 'orden') orden = row[key];
+                        if (cleanKey === 'familia') familia = row[key];
                     }
 
                     const color = getStatusColor(estado);
@@ -243,17 +269,32 @@
                         iconAnchor: [7, 7]
                     });
 
+                    // Logica de Galeria de Imagenes
+                    let imgsHTML = '';
+                    let especieLimpia = especie !== 'No especificada' ? especie.toString().trim() : '';
+                    
+                    if (especieLimpia) {
+                        for(let i = 1; i <= 6; i++) {
+                            // Si la imagen no existe, se borra a si misma llamando a checkEmptyGallery
+                            imgsHTML += `<img src="imagenes/${especieLimpia}_${i}.jpg" class="gallery-img" onerror="this.remove(); checkEmptyGallery(${count});">`;
+                        }
+                    }
+
                     const popupContent = `
                         <div class="popup-content">
-                            <h4>${row['Tipo']}: <i>${row['Especie'] || 'No especificada'}</i></h4>
+                            <h4>${row['Tipo']}: <i>${especie}</i></h4>
                             <hr>
-                            <p><b>Phylum:</b> ${row['Phylum'] || '-'}<br>
-                               <b>Clase:</b> ${row['Clase'] || '-'}<br>
-                               <b>Orden:</b> ${row['Orden'] || '-'}<br>
-                               <b>Familia:</b> ${row['Familia'] || '-'}<br>
+                            <p><b>Phylum:</b> ${phylum}<br>
+                               <b>Clase:</b> ${clase}<br>
+                               <b>Orden:</b> ${orden}<br>
+                               <b>Familia:</b> ${familia}<br>
                                <b>Origen:</b> <span style="color: ${origenColor}; font-weight: bold;">${origen}</span><br>
                                <b>Estado:</b> <span style="color: ${color}; font-weight: bold;">${estado}</span></p>
-                            <div class="image-placeholder"><p style="margin:0;">(Imagenes no disponibles)</p></div>
+                            
+                            <div id="gal-${count}" class="gallery-container">
+                                ${imgsHTML}
+                            </div>
+                            <div id="noimg-${count}" class="image-placeholder" style="display:none;"><p style="margin:0;">(Imagenes no disponibles)</p></div>
                         </div>
                     `;
 
